@@ -5,17 +5,19 @@ using Server.Network;
 namespace Server.Engines.MLQuests
 {
     /// <summary>
-    ///     Shows a "!" above quest givers that have a quest the viewing player can accept right now.
-    ///     The client has no quest-icon support, so the marker is private overhead text re-sent on an interval.
+    ///     Marks quest givers that have a quest the viewing player can accept right now with a hued effect
+    ///     that only that player sees. Effects carry no text, so nothing reaches the journal; each one expires
+    ///     on its own, so the marker is re-sent on an interval.
     /// </summary>
     public static class QuestMarker
     {
-        // Largest of the client's ASCII fonts.
-        private const int Font = 0;
         private const int Range = 12;
+        private const int Speed = 10;
 
         private static bool _enabled;
         private static int _hue;
+        private static int _effect;
+        private static int _duration;
         private static TimeSpan _interval;
 
         public static void Configure()
@@ -23,8 +25,12 @@ namespace Server.Engines.MLQuests
             _enabled = ServerConfiguration.GetOrUpdateSetting("questSystem.questMarkers", true);
             _hue = ServerConfiguration.GetOrUpdateSetting("questSystem.questMarkerHue", 0x35);
 
-            // Overhead text lingers about 4 seconds; resending sooner stacks markers above the head.
-            _interval = ServerConfiguration.GetOrUpdateSetting("questSystem.questMarkerInterval", TimeSpan.FromSeconds(5));
+            // Sparkles
+            _effect = ServerConfiguration.GetOrUpdateSetting("questSystem.questMarkerEffect", 0x376A);
+            _interval = ServerConfiguration.GetOrUpdateSetting("questSystem.questMarkerInterval", TimeSpan.FromSeconds(10));
+
+            // Shorter than the interval so the marker pulses instead of sparkling nonstop.
+            _duration = ServerConfiguration.GetOrUpdateSetting("questSystem.questMarkerDuration", 60);
         }
 
         public static void Initialize()
@@ -37,6 +43,8 @@ namespace Server.Engines.MLQuests
 
         private static void Tick()
         {
+            Span<byte> effect = stackalloc byte[OutgoingEffectPackets.HuedEffectLength].InitializePacket();
+
             foreach (var ns in NetState.Instances)
             {
                 if (ns.Mobile is not PlayerMobile { Alive: true } pm || pm.Map == null || pm.Map == Map.Internal)
@@ -50,7 +58,10 @@ namespace Server.Engines.MLQuests
                 {
                     if (bc.CanGiveMLQuest && pm.CanSee(bc) && HasOfferableQuest(bc, pm, context))
                     {
-                        ns.SendMessage(bc.Serial, bc.Body, MessageType.Label, _hue, Font, true, bc.Language, bc.Name, "!");
+                        // Create* skips a buffer that already holds a packet, so clear it for each quest giver.
+                        effect.InitializePacket();
+                        OutgoingEffectPackets.CreateTargetHuedEffect(effect, bc, _effect, Speed, _duration, _hue, 0);
+                        ns.Send(effect);
                     }
                 }
             }
