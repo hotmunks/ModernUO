@@ -732,12 +732,18 @@ public partial class BaseEscortable : BaseCreature
     [AfterDeserialization]
     private void AfterDeserialization()
     {
-        if (MLQuestSystem.Enabled && !StaticMLQuester && _mlQuest != null && _mlQuestType != null)
+        // _mlQuest is not serialized; rebuild it from the saved type or the escort loads with no quest.
+        if (MLQuestSystem.Enabled && !StaticMLQuester && _mlQuestType != null)
         {
             var quest = MLQuestSystem.FindQuest(_mlQuestType);
             if (quest != null)
             {
                 _mlQuest = [quest];
+            }
+            else
+            {
+                // Unregistered quest type: clear it so ConstructQuestList picks a new one.
+                _mlQuestType = null;
             }
         }
     }
