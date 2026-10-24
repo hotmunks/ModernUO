@@ -10,8 +10,22 @@ public abstract partial class BaseRunicTool : BaseTool
 {
     private const int MaxProperties = 32;
 
+    // Jewelry property indices 19-23 each fill one AosSkillBonuses slot.
+    private const int JewelrySkillBonusOffset = 19;
+    private const int JewelrySkillBonusSlots = 5;
+
     private static bool m_IsRunicTool;
     private static int m_LuckChance;
+    private static int _maxJewelrySkillBonuses;
+
+    public static void Configure()
+    {
+        _maxJewelrySkillBonuses = Math.Clamp(
+            ServerConfiguration.GetOrUpdateSetting("loot.maxJewelrySkillBonuses", JewelrySkillBonusSlots),
+            0,
+            JewelrySkillBonusSlots
+        );
+    }
 
     private static readonly SkillName[] m_PossibleBonusSkills =
     {
@@ -945,6 +959,12 @@ public abstract partial class BaseRunicTool : BaseTool
         var skills = jewelry.SkillBonuses;
 
         m_Props.SetAll(false);
+
+        // Marking the excess skill slots as taken makes those rolls land on other properties instead
+        for (var i = _maxJewelrySkillBonuses; i < JewelrySkillBonusSlots; ++i)
+        {
+            m_Props.Set(JewelrySkillBonusOffset + i, true);
+        }
 
         for (var i = 0; i < attributeCount; ++i)
         {
