@@ -720,28 +720,36 @@ namespace Server
                         props = MaxProps;
                     }
 
+                    // The loot roll is skewed toward its floor, so a raised boss floor needs the even
+                    // runic-style roll or nearly every property lands exactly on the floor.
+                    var uniformRoll = false;
+
+                    if (from != null && BossLoot.IsBoss(from))
+                    {
+                        props = Math.Max(props, BossLoot.MinProperties);
+
+                        if (BossLoot.MinIntensity > min)
+                        {
+                            min = Math.Min(BossLoot.MinIntensity, max);
+                            uniformRoll = true;
+                        }
+                    }
+
                     if (item is BaseWeapon weapon)
                     {
-                        BaseRunicTool.ApplyAttributesTo(weapon, false, luckChance, props, MinIntensity, MaxIntensity);
+                        BaseRunicTool.ApplyAttributesTo(weapon, uniformRoll, luckChance, props, min, max);
                     }
                     else if (item is BaseArmor armor)
                     {
-                        BaseRunicTool.ApplyAttributesTo(armor, false, luckChance, props, MinIntensity, MaxIntensity);
+                        BaseRunicTool.ApplyAttributesTo(armor, uniformRoll, luckChance, props, min, max);
                     }
                     else if (item is BaseJewel jewel)
                     {
-                        BaseRunicTool.ApplyAttributesTo(jewel, false, luckChance, props, MinIntensity, MaxIntensity);
+                        BaseRunicTool.ApplyAttributesTo(jewel, uniformRoll, luckChance, props, min, max);
                     }
                     else
                     {
-                        BaseRunicTool.ApplyAttributesTo(
-                            (BaseHat)item,
-                            false,
-                            luckChance,
-                            props,
-                            MinIntensity,
-                            MaxIntensity
-                        );
+                        BaseRunicTool.ApplyAttributesTo((BaseHat)item, uniformRoll, luckChance, props, min, max);
                     }
                 }
                 else // not aos

@@ -5423,7 +5423,12 @@ namespace Server.Mobiles
             var backpack = Backpack ?? new Backpack { Movable = false };
             AddItem(backpack);
 
-            pack.Generate(this, backpack, m_Spawning, m_KillersLuck);
+            var times = BossLoot.IsBoss(this) ? BossLoot.PackMultiplier : 1;
+
+            for (var i = 0; i < times; ++i)
+            {
+                pack.Generate(this, backpack, m_Spawning, m_KillersLuck);
+            }
         }
 
         public bool PackArmor(int minLevel, int maxLevel) => PackArmor(minLevel, maxLevel, 1.0);
